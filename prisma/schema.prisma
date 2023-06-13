@@ -1,0 +1,170 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  email        String   @unique
+  createdAt    DateTime @default(now())
+  name         String
+  passwordHash String
+  passwordSalt String
+  isAdmin      Boolean
+  Report       Report[]
+
+  @@map("users")
+}
+
+model Report {
+  id                   Int                    @id @default(autoincrement())
+  title                String
+  authorName           String
+  author               User?                  @relation(fields: [authorId], references: [id])
+  authorId             Int?
+  tripType             TripType
+  difficulty           TripDifficulty?
+  season               Season
+  year                 DateTime               @db.Date
+  route                Route                  @relation(fields: [routeId], references: [id])
+  routeId              Int
+  url                  String?
+  fileUrl              String?
+  LocationToDifficulty LocationToDifficulty[]
+
+  @@map("reports")
+}
+
+enum TripType {
+  Hiking
+  Mountaineering
+  Alpinism
+  Cycling
+  Car
+  Water
+  Ski
+  Speleo
+  Autostop
+}
+
+enum TripDifficulty {
+  NonKatecorigal
+  First
+  Second
+  Third
+  Fourth
+  Fifth
+  Sixth
+}
+
+enum Season {
+  Summer
+  Autumn
+  Winter
+  Spring
+}
+
+model Route {
+  id      Int         @id @default(autoincrement())
+  reports Report[]
+  stops   RouteStop[]
+
+  @@map("routes")
+}
+
+model RouteStop {
+  id         Int      @id @default(autoincrement())
+  route      Route    @relation(fields: [routeId], references: [id])
+  routeId    Int
+  name       String?
+  stopNumber Int
+  location   Location @relation(fields: [locationId], references: [id])
+  locationId Int
+
+  @@map("route_stops")
+}
+
+model Location {
+  id               Int                    @id @default(autoincrement())
+  canonicalName    String
+  description      String?
+  longitude        Decimal?
+  latitude         Decimal?
+  elevation        Decimal?
+  type             LocationType?
+  routeStops       RouteStop[]
+  alternativeNames NameToLocation[]
+  diffcultyRecords LocationToDifficulty[]
+
+  @@map("locations")
+}
+
+model LocationToDifficulty {
+  id                Int                @id @default(autoincrement())
+  location          Location           @relation(fields: [locationId], references: [id])
+  locationId        Int
+  season            Season?
+  difficulty        LocationDifficulty
+  // TODO data may duplicate, but I guess it is okay for now
+  sourceUrl         String?
+  sourseDescription String?
+  sourceReport      Report?            @relation(fields: [soureReportId], references: [id])
+  soureReportId     Int?
+
+  @@map("locations_to_difficulties")
+}
+
+enum LocationType {
+  Height
+  Mountain
+  MountainPass
+  MountainRange
+
+  Lake
+  Stream
+  Waterfall
+  DrinkingWaterSource
+  WaterObject
+
+  Walley
+  Polonyna
+
+  Settlement
+
+  NatureObject
+  ArtificialObject
+}
+
+enum LocationDifficulty {
+  NonCategorized
+  First_A
+  First_A_star
+  First_B
+  First_B_star
+  Second_A
+  Second_A_star
+  Second_B
+  Second_B_star
+  Third_A
+  Third_A_star
+  Third_B
+  Third_B_star
+}
+
+// TODO deal with two locations with same name
+model NameToLocation {
+  id         Int      @id @default(autoincrement())
+  name       String
+  location   Location @relation(fields: [locationId], references: [id])
+  locationId Int
+
+  @@map("names_to_locations")
+}
